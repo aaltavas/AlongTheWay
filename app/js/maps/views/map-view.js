@@ -11,10 +11,13 @@ var FormView = require('./form-view');
 var MapView = Backbone.View.extend({
   id: 'map-view',
   places: [],
+  markers: [],
   events: {
     "click #overlay-handle": "show",
     "click #go":"getRoute",
-    "click #back-to-top": "goBackToTop"
+    "click #back-to-top": "goBackToTop",
+    "click .mapPin" : "addDetails",
+    "click #clear": "deleteMarkers"
   },
 
   initialize: function(){
@@ -38,6 +41,8 @@ var MapView = Backbone.View.extend({
       _this.service = new _this.google.maps.places.PlacesService(_this.map);
       _this.directionsService = new _this.google.maps.DirectionsService();
       _this.infowindow = new _this.google.maps.InfoWindow();
+      _this.autocomplete1 = new google.maps.places.Autocomplete(document.getElementById('address'))
+      _this.autocomplete2 = new google.maps.places.Autocomplete(document.getElementById('address2'))
       // initialize browser's geolocation service
       _this.initializeGeolocation();
     });
@@ -175,8 +180,12 @@ var MapView = Backbone.View.extend({
     var rating = thisPlace.rating ? thisPlace.rating : 'no rating';
     var types = thisPlace.types.join(' ');
 
+    var request = {
+      placeId: thisPlace.place_id
+    }
+
     this.$('#results-section ul')
-      .append('<li class="results-item '+types+'"><a>'+thisPlace.name+'<a/><p>'+rating+'</p></li>');
+      .append('<li class="results-item '+types+'" id ="' + thisPlace.place_id + '"><a>'+thisPlace.name+'<a/><p>'+rating+'</p><div class="details"></div></li>');
   },
 
   makeMapMarker: function(thisPlace){
@@ -195,9 +204,21 @@ var MapView = Backbone.View.extend({
 
     // add info box
     this.google.maps.event.addListener(pin,'click',function(){
-      _this.infowindow.setContent('<p>'+thisPlace.name+'</p>');
+      _this.infowindow.setContent('<p><a class="mapPin" href="#'+ thisPlace.place_id + '">' + thisPlace.name + '</a></p>');
       _this.infowindow.open(_this.map, pin);
     });
+    this.markers.push(pin);
+  },
+
+  addDetails:function(e){
+    //console.log(e.target.hash);
+    var li = this.$(e.target.hash);
+    console.log(this.places);
+    var place = _.where(this.places, {'place_id': e.target.hash.substring(1)});
+    console.log(place);
+      var details = '' + place[0].vicinity;
+      li.find('.details').html(details);
+  
   },
 
   updateProgress: function(index){
@@ -207,7 +228,18 @@ var MapView = Backbone.View.extend({
 
   goBackToTop: function(){
     window.scrollTo(0,0);
+  },
+
+  setAllMap: function(map) {
+     for (var i = 0; i < this.markers.length; i++) {
+    this.markers[i].setMap(map);
   }
+  },
+
+  deleteMarkers: function() {
+    this.setAllMap(null);
+    this.markers = [];
+  }  
 
 });
 
